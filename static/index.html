@@ -279,6 +279,16 @@
           >
         </div>
 
+        <div class="field">
+          <input
+            type="text"
+            name="website"
+            tabindex="-1"
+            autocomplete="off"
+            style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;"
+          >
+        </div>
+
         <div class="actions">
           <button id="continueBtn" class="submit-btn" type="submit">Continue</button>
         </div>
@@ -306,7 +316,8 @@
       const payload = {
         reference: String(formData.get("reference") || "").trim(),
         amount: String(formData.get("amount") || "").trim(),
-        email: String(formData.get("email") || "").trim()
+        email: String(formData.get("email") || "").trim(),
+        website: String(formData.get("website") || "").trim()  // honeypot
       };
 
       try {
