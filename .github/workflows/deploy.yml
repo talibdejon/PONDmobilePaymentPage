@@ -18,14 +18,14 @@ jobs:
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
+          host: ${{ secrets.POND_PAYMENT_SERVER_HOST }}
+          username: ${{ secrets.POND_PAYMENT_SERVER_USER }}
+          key: ${{ secrets.POND_PAYMENT_SERVER_SSH_KEY }}
+          port: ${{ secrets.POND_PAYMENT_SERVER_PORT || 22 }}
           script_stop: true
           script: |
             # Set variables
-            REPO_DIR="${{ secrets.SERVER_DEPLOY_PATH }}"
+            REPO_DIR="${{ secrets.POND_PAYMENT_DEPLOY_PATH }}"
             IMAGE_NAME="pondmobile-payment"
             CONTAINER_NAME="pondmobile-payment"
             VERSION="${{ steps.sha.outputs.short_sha }}"
@@ -42,7 +42,7 @@ jobs:
             else
               echo "📦 Cloning repository..."
               rm -rf "$REPO_DIR"
-              git clone --depth 1 --branch main ${{ secrets.REPO_URL }} "$REPO_DIR"
+              git clone --depth 1 --branch main ${{ secrets.POND_PAYMENT_REPO_URL }} "$REPO_DIR"
               cd "$REPO_DIR"
             fi
 

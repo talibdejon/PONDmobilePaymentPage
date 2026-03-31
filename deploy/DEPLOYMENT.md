@@ -6,14 +6,16 @@
 
 Configure these secrets in: `Repository Settings > Secrets and variables > Actions`
 
+**Note:** All secrets use `POND_PAYMENT_` prefix to avoid conflicts with other repositories.
+
 | Secret | Description | Example |
 |--------|-------------|---------|
-| `SERVER_HOST` | Server IP or domain | `123.45.67.89` or `payment.example.com` |
-| `SERVER_USER` | SSH user | `root` or `deploy` |
-| `SERVER_SSH_KEY` | Private SSH key | Copy contents of `~/.ssh/id_rsa` |
-| `SERVER_PORT` | SSH port (optional) | `22` (default) |
-| `SERVER_DEPLOY_PATH` | Deployment directory | `/opt/pondmobile-payment` |
-| `REPO_URL` | Git repository URL | `git@github.com:bpdu/PondMobilePaymentPage.git` |
+| `POND_PAYMENT_SERVER_HOST` | Server IP or domain | `123.45.67.89` or `payment.example.com` |
+| `POND_PAYMENT_SERVER_USER` | SSH user | `root` or `deploy` |
+| `POND_PAYMENT_SERVER_SSH_KEY` | Private SSH key | Copy contents of `~/.ssh/id_rsa` |
+| `POND_PAYMENT_SERVER_PORT` | SSH port (optional) | `22` (default) |
+| `POND_PAYMENT_DEPLOY_PATH` | Deployment directory | `/opt/pondmobile-payment` |
+| `POND_PAYMENT_REPO_URL` | Git repository URL | `git@github.com:bpdu/PondMobilePaymentPage.git` |
 
 ### Setting up SSH Key
 
