@@ -4,18 +4,21 @@
 
 ### Prerequisites
 
-**First, set up the deploy user on your server:**
-→ See [Server Setup Guide](./SETUP_USER.md) for detailed instructions
-
-Quick setup:
+**1. Create deploy user on server:**
 ```bash
 # On server
 sudo adduser github-deploy
 sudo usermod -aG docker github-deploy
+```
 
+**2. Generate SSH key:**
+```bash
 # On your machine
 ssh-keygen -t ed25519 -C "github-deploy@pondmobile" -f ~/.ssh/github_deploy_pond
 ssh-copy-id -i ~/.ssh/github_deploy_pond.pub github-deploy@your-server-ip
+
+# Test connection
+ssh -i ~/.ssh/github_deploy_pond github-deploy@your-server-ip "docker ps"
 ```
 
 ### Required GitHub Secrets
