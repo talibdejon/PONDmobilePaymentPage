@@ -212,14 +212,15 @@ jobs:
             echo "    Image: $IMAGE_NAME:$VERSION"
             echo "    Port: 5001:5001"
             echo "    Volume: pondmobile-logs:/app/logs"
-            echo "    Config: deploy/.env.example"
+            echo "    Config: GitHub Secrets + config/config.txt"
 
             docker run -d \
               --name $CONTAINER_NAME \
               --restart unless-stopped \
               -p 5001:5001 \
               -v pondmobile-logs:/app/logs \
-              --env-file deploy/.env.example \
+              -e AUTHORIZE_API_LOGIN_ID="${{ secrets.POND_PAYMENT_AUTHORIZE_API_LOGIN_ID }}" \
+              -e AUTHORIZE_TRANSACTION_KEY="${{ secrets.POND_PAYMENT_AUTHORIZE_TRANSACTION_KEY }}" \
               $IMAGE_NAME:$VERSION 2>&1 || {
               echo "ERROR: docker run failed"
               echo "Check container logs for startup errors"

@@ -30,11 +30,13 @@ Configure these secrets in: `Repository Settings > Secrets and variables > Actio
 | Secret | Description | Example |
 |--------|-------------|---------|
 | `POND_PAYMENT_SERVER_HOST` | Server IP or domain | `123.45.67.89` or `payment.pondmobile.com` |
-| `POND_PAYMENT_SERVER_USER` | SSH user | `root` or `deploy` |
+| `POND_PAYMENT_SERVER_USER` | SSH user | `github-deploy` |
 | `POND_PAYMENT_SERVER_SSH_KEY` | Private SSH key | Copy contents of `~/.ssh/id_rsa` |
 | `POND_PAYMENT_SERVER_PORT` | SSH port (optional) | `22` (default) |
 | `POND_PAYMENT_DEPLOY_PATH` | Deployment directory | `/opt/pondmobile-payment` |
 | `POND_PAYMENT_REPO_URL` | Git repository URL | `git@github.com:bpdu/PondMobilePaymentPage.git` |
+| `POND_PAYMENT_AUTHORIZE_API_LOGIN_ID` | Authorize.net API Login ID | Your actual ID |
+| `POND_PAYMENT_AUTHORIZE_TRANSACTION_KEY` | Authorize.net Transaction Key | Your actual key |
 
 ### Setting up SSH Key
 
@@ -51,25 +53,16 @@ cat ~/.ssh/github_deploy
 
 ### Environment Configuration
 
-Before deploying, configure `deploy/.env.example` on the server:
-
+**Application configuration** (managed in repository):
 ```bash
-# On the server
-cd /opt/pondmobile-payment
-nano deploy/.env.example
-```
-
-**Required settings:**
-
-```bash
-# deploy/.env.example - Authorize.net credentials
-AUTHORIZE_API_LOGIN_ID=your-actual-api-login-id
-AUTHORIZE_TRANSACTION_KEY=your-actual-transaction-key
-
 # config/config.txt - Application URLs
 APP_BASE_URL=https://www.pondmobile.com
 ALLOWED_ORIGINS=https://www.pondmobile.com,https://pondmobile.com,http://localhost:5001,http://127.0.0.1:5001
 ```
+
+**Secrets** (managed in GitHub Secrets):
+- `POND_PAYMENT_AUTHORIZE_API_LOGIN_ID` - Authorize.net credentials
+- `POND_PAYMENT_AUTHORIZE_TRANSACTION_KEY` - Authorize.net transaction key
 
 **Note:** ALLOWED_ORIGINS includes localhost for testing. You can test the deployed API from your local machine.
 
@@ -93,7 +86,7 @@ ALLOWED_ORIGINS=https://www.pondmobile.com,https://pondmobile.com,http://localho
 
 - Docker installed on server
 - Git access to repository
-- `deploy/.env.example` configured with Authorize.net credentials
+- GitHub Secrets configured with Authorize.net credentials
 - `config/config.txt` contains application URLs (defaults are production-ready)
 
 ### Manual Docker Commands
@@ -106,13 +99,14 @@ docker build \
   -t pondmobile-payment:latest \
   .
 
-# Run container
+# Run container with secrets from environment
 docker run -d \
   --name pondmobile-payment \
   --restart unless-stopped \
   -p 5001:5001 \
   -v pondmobile-logs:/app/logs \
-  --env-file deploy/.env.example \
+  -e AUTHORIZE_API_LOGIN_ID=your-api-login-id \
+  -e AUTHORIZE_TRANSACTION_KEY=your-transaction-key \
   pondmobile-payment:latest
 ```
 
@@ -169,6 +163,7 @@ docker run -d \
   --restart unless-stopped \
   -p 5001:5001 \
   -v pondmobile-logs:/app/logs \
-  --env-file deploy/.env.example \
+  -e AUTHORIZE_API_LOGIN_ID=your-api-login-id \
+  -e AUTHORIZE_TRANSACTION_KEY=your-transaction-key \
   pondmobile-payment:abc1234
 ```
