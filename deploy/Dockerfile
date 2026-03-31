@@ -31,6 +31,9 @@ RUN mkdir -p logs && chown -R nonroot:nonroot /app
 # Switch to non-root user
 USER nonroot
 
+# Declare volume for persistent logs
+VOLUME ["/app/logs"]
+
 # Expose port
 EXPOSE 5001
 
