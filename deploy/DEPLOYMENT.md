@@ -75,17 +75,6 @@ DOCKER_ENV=true
 - Git access to repository
 - `deploy/.env.example` configured with actual credentials
 
-### Quick Deploy
-
-```bash
-# Clone repo
-git clone git@github.com:bpdu/PondMobilePaymentPage.git
-cd PondMobilePaymentPage/deploy
-
-# Run deploy script
-./deploy.sh
-```
-
 ### Manual Docker Commands
 
 ```bash
