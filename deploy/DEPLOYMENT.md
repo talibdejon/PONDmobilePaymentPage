@@ -50,10 +50,10 @@ AUTHORIZE_TRANSACTION_KEY=your-actual-transaction-key
 
 # ⚠️ IMPORTANT: Use public domain/IP, NOT localhost
 # This URL is used for payment return after Authorize.net checkout
-APP_BASE_URL=https://payment.pondmobile.com
+APP_BASE_URL=https://www.pondmobile.com
 
 # CORS origins - must match where users access the payment form
-ALLOWED_ORIGINS=https://payment.pondmobile.com,https://pondmobile.com
+ALLOWED_ORIGINS=https://www.pondmobile.com,https://pondmobile.com
 
 # Production mode
 FLASK_ENV=production
