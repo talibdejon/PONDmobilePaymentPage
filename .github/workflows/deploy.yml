@@ -199,12 +199,12 @@ jobs:
             echo "🚀 Starting New Container"
             echo "=========================================="
 
-            # Check if .env.example exists
-            if [ ! -f "deploy/.env.example" ]; then
-              echo "ERROR: deploy/.env.example not found!"
+            # Check if config.txt exists
+            if [ ! -f "config/config.txt" ]; then
+              echo "ERROR: config/config.txt not found!"
               echo "  Current directory: $(pwd)"
-              echo "  Files in deploy/:"
-              ls -la deploy/ 2>&1 || echo "  (cannot list)"
+              echo "  Files in config/:"
+              ls -la config/ 2>&1 || echo "  (cannot list)"
               exit 1
             fi
 
