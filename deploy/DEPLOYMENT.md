@@ -2,6 +2,22 @@
 
 ## Automated Deployment via GitHub Actions
 
+### Prerequisites
+
+**First, set up the deploy user on your server:**
+→ See [Server Setup Guide](./SETUP_USER.md) for detailed instructions
+
+Quick setup:
+```bash
+# On server
+sudo adduser github-deploy
+sudo usermod -aG docker github-deploy
+
+# On your machine
+ssh-keygen -t ed25519 -C "github-deploy@pondmobile" -f ~/.ssh/github_deploy_pond
+ssh-copy-id -i ~/.ssh/github_deploy_pond.pub github-deploy@your-server-ip
+```
+
 ### Required GitHub Secrets
 
 Configure these secrets in: `Repository Settings > Secrets and variables > Actions`
