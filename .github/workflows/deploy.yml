@@ -4,32 +4,13 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - staging
-          - production
-          - development
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set environment
-        id: env
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
-          else
-            echo "environment=staging" >> $GITHUB_OUTPUT
-          fi
-
       - name: Get short SHA
         id: sha
         run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
@@ -48,18 +29,8 @@ jobs:
             IMAGE_NAME="pondmobile-payment"
             CONTAINER_NAME="pondmobile-payment"
             VERSION="${{ steps.sha.outputs.short_sha }}"
-            ENVIRONMENT="${{ steps.env.outputs.environment }}"
-            ENV_FILE="deploy/.env.$ENVIRONMENT"
 
             echo "🚀 Deploying version: $VERSION"
-            echo "📋 Environment: $ENVIRONMENT"
-            echo "📄 Config file: $ENV_FILE"
-
-            # Validate environment file exists
-            if [ ! -f "$ENV_FILE" ]; then
-              echo "❌ Environment file not found: $ENV_FILE"
-              exit 1
-            fi
 
             # Clone or update repository
             if [ -d "$REPO_DIR/.git" ]; then
@@ -100,7 +71,7 @@ jobs:
               --restart unless-stopped \
               -p 5001:5001 \
               -v pondmobile-logs:/app/logs \
-              --env-file "$ENV_FILE" \
+              --env-file deploy/.env.example \
               $IMAGE_NAME:$VERSION
 
             # Wait for health check

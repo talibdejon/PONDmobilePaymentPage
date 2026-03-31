@@ -2,33 +2,13 @@
 set -e
 
 # Configuration
-ENVIRONMENT="${1:-staging}"  # Default to staging (allows localhost testing)
 REPO_URL="${REPO_URL:-git@github.com:bpdu/PondMobilePaymentPage.git}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/pondmobile-payment}"
 IMAGE_NAME="pondmobile-payment"
 CONTAINER_NAME="pondmobile-payment"
 VERSION=$(git rev-parse --short HEAD 2>/dev/null || echo "manual-$(date +%s)")
 
-# Validate environment
-if [[ ! "$ENVIRONMENT" =~ ^(production|staging|development)$ ]]; then
-  echo "❌ Invalid environment: $ENVIRONMENT"
-  echo "Usage: $0 [production|staging|development]"
-  echo "  production  - Strict CORS, production domains only"
-  echo "  staging     - Production API with localhost access (default)"
-  echo "  development - Localhost only"
-  exit 1
-fi
-
-# Set env file based on environment
-ENV_FILE="deploy/.env.$ENVIRONMENT"
-if [ ! -f "$ENV_FILE" ]; then
-  echo "❌ Environment file not found: $ENV_FILE"
-  exit 1
-fi
-
 echo "🚀 Deploying POND Mobile Payment Gateway"
-echo "Environment: $ENVIRONMENT"
-echo "Config file: $ENV_FILE"
 echo "Version: $VERSION"
 
 # Clone or update repository
@@ -71,7 +51,7 @@ docker run -d \
   --restart unless-stopped \
   -p 5001:5001 \
   -v pondmobile-logs:/app/logs \
-  --env-file "$ENV_FILE" \
+  --env-file deploy/.env.example \
   "$IMAGE_NAME:$VERSION"
 
 # Wait for health check
