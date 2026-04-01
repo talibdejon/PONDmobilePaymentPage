@@ -27,9 +27,11 @@ APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5001").rstrip("/")
 BUILD_VERSION = os.getenv("BUILD_VERSION", "dev")
 
 # CORS configuration
+# Note: 'null' origin allows opening index.html directly from file:// (local files)
+# This is a security consideration - null origin bypasses same-origin policy
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",")
 if not ALLOWED_ORIGINS or ALLOWED_ORIGINS == [""]:
-    ALLOWED_ORIGINS = ["http://localhost:5001", "http://127.0.0.1:5001"]  # dev fallback
+    ALLOWED_ORIGINS = ["http://localhost:5001", "http://127.0.0.1:5001", "null"]  # dev fallback
 
 app = Flask(__name__, static_folder="static")
 CORS(app, resources={
@@ -185,6 +187,28 @@ def set_security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Content-Security-Policy"] = "default-src 'self'"
+    return response
+
+
+@app.after_request
+def handle_null_origin_cors(response):
+    """
+    Handle CORS for 'null' origin (local file:// access).
+
+    Security consideration: Allowing 'null' origin permits opening index.html
+    directly from the file system, bypassing normal same-origin policy.
+    This is convenient for local testing but has security implications.
+    """
+    origin = request.headers.get("Origin")
+
+    # Handle 'null' origin for local file access
+    if origin == "null":
+        response.headers["Access-Control-Allow-Origin"] = "null"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        response.headers["Access-Control-Max-Age"] = "3600"
+        response.headers["Vary"] = "Origin"
+
     return response
 
 
