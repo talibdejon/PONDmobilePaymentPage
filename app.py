@@ -18,8 +18,8 @@ from email_validator import validate_email as EmailValidator, EmailNotValidError
 load_dotenv(dotenv_path="config/config.txt", override=False)
 
 # Environment variables (must be defined before Flask app)
-AUTHORIZE_API_URL = "https://apitest.authorize.net/xml/v1/request.api"
-AUTHORIZE_HOSTED_FORM_URL = "https://test.authorize.net/payment/payment"
+AUTHORIZE_API_URL = "https://api.authorize.net/xml/v1/request.api"
+AUTHORIZE_HOSTED_FORM_URL = "https://accept.authorize.net/payment/payment"
 
 API_LOGIN_ID = os.getenv("AUTHORIZE_API_LOGIN_ID", "").strip()
 TRANSACTION_KEY = os.getenv("AUTHORIZE_TRANSACTION_KEY", "").strip()
