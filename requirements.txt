@@ -1,4 +1,7 @@
 flask
 flask-cors
+flask-limiter
+gunicorn
 requests
 python-dotenv
+email-validator

@@ -1,0 +1,2 @@
+APP_BASE_URL=https://www.pondmobile.com
+ALLOWED_ORIGINS=https://www.pondmobile.com,https://pondmobile.com,http://localhost:5001,http://127.0.0.1:5001

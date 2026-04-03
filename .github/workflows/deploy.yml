@@ -1,0 +1,294 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get short SHA
+        id: sha
+        run: |
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          echo "Short SHA: $SHORT_SHA"
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.POND_PAYMENT_SERVER_HOST }}
+          username: ${{ secrets.POND_PAYMENT_SERVER_USER }}
+          key: ${{ secrets.POND_PAYMENT_SERVER_SSH_KEY }}
+          port: ${{ secrets.POND_PAYMENT_SERVER_PORT || 22 }}
+          script_stop: false  # Continue on error to show all output
+          request_pty: true   # Get proper TTY for better error handling
+          script: |
+            set -e  # Exit on error
+
+            # Set variables
+            REPO_DIR="${{ secrets.POND_PAYMENT_DEPLOY_PATH }}"
+            IMAGE_NAME="pondmobile-payment"
+            CONTAINER_NAME="pondmobile-payment"
+            VERSION="${{ steps.sha.outputs.short_sha }}"
+
+            echo "=========================================="
+            echo "🚀 Deployment Configuration"
+            echo "=========================================="
+            echo "Version: $VERSION"
+            echo "Deploy Path: $REPO_DIR"
+            echo "Image: $IMAGE_NAME"
+            echo "Container: $CONTAINER_NAME"
+            echo "=========================================="
+
+            # Prerequisites check
+            echo ""
+            echo "🔍 Checking prerequisites..."
+
+            # Check git
+            echo -n "  ✓ Git: "
+            if command -v git >/dev/null 2>&1; then
+              git --version
+            else
+              echo "❌ NOT FOUND"
+              echo "ERROR: Git is not installed"
+              exit 1
+            fi
+
+            # Check docker
+            echo -n "  ✓ Docker: "
+            if command -v docker >/dev/null 2>&1; then
+              docker --version
+            else
+              echo "❌ NOT FOUND"
+              echo "ERROR: Docker is not installed"
+              exit 1
+            fi
+
+            # Check docker access
+            echo -n "  ✓ Docker access: "
+            if docker ps >/dev/null 2>&1; then
+                echo "OK"
+              else
+                echo "❌ FAILED"
+                echo "ERROR: Cannot access docker. Check user permissions"
+                exit 1
+              fi
+
+            # Check/create deploy directory
+            echo -n "  ✓ Deploy directory: "
+            if [ -d "$REPO_DIR" ]; then
+                echo "EXISTS ($REPO_DIR)"
+              else
+                echo "CREATING..."
+                mkdir -p "$REPO_DIR" || {
+                  echo "ERROR: Cannot create directory $REPO_DIR"
+                  echo "Check permissions for user $(whoami)"
+                  exit 1
+                }
+                echo "  ✓ Created $REPO_DIR"
+              fi
+
+            echo ""
+            echo "=========================================="
+            echo "📦 Repository Update"
+            echo "=========================================="
+
+            # Clone or update repository
+            if [ -d "$REPO_DIR/.git" ]; then
+              echo "Existing repository found, pulling changes..."
+              cd "$REPO_DIR" || {
+                echo "ERROR: Cannot access $REPO_DIR"
+                exit 1
+              }
+
+              echo "  → Fetching all branches..."
+              git fetch --all 2>&1 || {
+                echo "ERROR: git fetch failed"
+                exit 1
+              }
+
+              echo "  → Resetting to origin/main..."
+              git reset --hard origin/main 2>&1 || {
+                echo "ERROR: git reset failed"
+                exit 1
+              }
+
+              echo "  → Cleaning untracked files..."
+              git clean -fd 2>&1 || {
+                echo "ERROR: git clean failed"
+                exit 1
+              }
+              echo "  ✓ Repository updated"
+            else
+              echo "Cloning fresh repository..."
+              rm -rf "$REPO_DIR" 2>/dev/null || true
+              git clone --depth 1 --branch main ${{ secrets.POND_PAYMENT_REPO_URL }} "$REPO_DIR" 2>&1 || {
+                echo "ERROR: git clone failed"
+                echo "Check if repo URL is correct and SSH key has access"
+                exit 1
+              }
+              cd "$REPO_DIR" || {
+                echo "ERROR: Cannot access cloned directory"
+                exit 1
+              }
+              echo "  ✓ Repository cloned"
+            fi
+
+            # Show current commit
+            echo ""
+            echo "  Current commit:"
+            git log -1 --oneline || echo "    (unable to show commit)"
+
+            echo ""
+            echo "=========================================="
+            echo "🔨 Building Docker Image"
+            echo "=========================================="
+
+            docker build \
+              -f deploy/Dockerfile \
+              --build-arg BUILD_VERSION=$VERSION \
+              -t $IMAGE_NAME:$VERSION \
+              -t $IMAGE_NAME:latest \
+              . 2>&1 || {
+              echo ""
+              echo "ERROR: Docker build failed"
+              echo "Check Dockerfile and dependencies"
+              exit 1
+            }
+
+            echo "  ✓ Image built successfully: $IMAGE_NAME:$VERSION"
+
+            echo ""
+            echo "=========================================="
+            echo "🛑 Stopping Old Container"
+            echo "=========================================="
+
+            # Check for any container (running or stopped) with this name
+            if docker ps -aq -f name=$CONTAINER_NAME | grep -q .; then
+              echo "  → Container exists (running or stopped), removing..."
+              docker rm -f $CONTAINER_NAME 2>&1 || echo "  (rm failed, continuing)"
+              echo "  ✓ Old container removed"
+            else
+              echo "  → No existing container found"
+            fi
+
+            echo ""
+            echo "=========================================="
+            echo "🧹 Cleaning Old Images"
+            echo "=========================================="
+
+            OLD_IMAGES=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "$IMAGE_NAME" | tail -n +3)
+            if [ -n "$OLD_IMAGES" ]; then
+              echo "  → Removing old images:"
+              echo "$OLD_IMAGES" | while read img; do
+                echo "    - $img"
+              done
+              echo "$OLD_IMAGES" | xargs -r docker rmi -f 2>&1 || echo "  (some images not removed)"
+              echo "  ✓ Old images cleaned"
+            else
+              echo "  → No old images to remove"
+            fi
+
+            echo ""
+            echo "=========================================="
+            echo "🚀 Starting New Container"
+            echo "=========================================="
+
+            # Check if config.txt exists
+            if [ ! -f "config/config.txt" ]; then
+              echo "ERROR: config/config.txt not found!"
+              echo "  Current directory: $(pwd)"
+              echo "  Files in config/:"
+              ls -la config/ 2>&1 || echo "  (cannot list)"
+              exit 1
+            fi
+
+            echo "  → Running container with configuration:"
+            echo "    Image: $IMAGE_NAME:$VERSION"
+            echo "    Port: 5001:5001"
+            echo "    Volume: pondmobile-logs:/app/logs"
+            echo "    Config: GitHub Secrets + config/config.txt"
+
+            docker run -d \
+              --name $CONTAINER_NAME \
+              --restart unless-stopped \
+              -p 5001:5001 \
+              -v pondmobile-logs:/app/logs \
+              --cpus="0.5" \
+              --memory="512m" \
+              --pids-limit 100 \
+              -e AUTHORIZE_API_LOGIN_ID="${{ secrets.POND_PAYMENT_AUTHORIZE_API_LOGIN_ID }}" \
+              -e AUTHORIZE_TRANSACTION_KEY="${{ secrets.POND_PAYMENT_AUTHORIZE_TRANSACTION_KEY }}" \
+              $IMAGE_NAME:$VERSION 2>&1 || {
+              echo "ERROR: docker run failed"
+              echo "Check container logs for startup errors"
+              exit 1
+            }
+
+            CONTAINER_ID=$(docker ps -q -f name=$CONTAINER_NAME)
+            if [ -z "$CONTAINER_ID" ]; then
+              echo "ERROR: Container started but not running!"
+              docker logs $CONTAINER_NAME 2>&1 || true
+              exit 1
+            fi
+
+            echo "  ✓ Container started: $CONTAINER_ID"
+
+            echo ""
+            echo "=========================================="
+            echo "⏳ Waiting for Health Check"
+            echo "=========================================="
+
+            sleep 5
+            for i in {1..10}; do
+              echo -n "  Attempt $i/10... "
+              HEALTH=$(curl -s http://localhost:5001/health 2>&1 || echo "curl-failed")
+
+              if [ "$HEALTH" = "curl-failed" ]; then
+                echo "❌ Cannot reach endpoint"
+              elif echo "$HEALTH" | grep -q "healthy \[$VERSION\]"; then
+                echo "✅ OK"
+                echo ""
+                echo "  Response: $HEALTH"
+                break
+              else
+                echo "⚠️  Wrong version"
+                echo "  Got: $HEALTH"
+                echo "  Expected: healthy [$VERSION]"
+              fi
+
+              if [ $i -eq 10 ]; then
+                echo ""
+                echo "ERROR: Health check failed after 10 attempts"
+                echo ""
+                echo "Container logs:"
+                docker logs $CONTAINER_NAME --tail 50 2>&1 || echo "  (cannot get logs)"
+                exit 1
+              fi
+
+              sleep 2
+            done
+
+            echo ""
+            echo "=========================================="
+            echo "✅ Deployment Successful!"
+            echo "=========================================="
+            echo "Version: $VERSION"
+            echo "Container: $CONTAINER_NAME"
+            echo "Image: $IMAGE_NAME:$VERSION"
+
+            echo ""
+            echo "📊 Running containers:"
+            docker ps --filter "name=$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Image}}"
+
+            echo ""
+            echo "🔍 Container details:"
+            docker inspect $CONTAINER_NAME --format '{{.State.Status}}: {{.State.StartedAt}}' 2>&1 || echo "  (cannot inspect)"
+
+            echo ""
+            echo "=========================================="
